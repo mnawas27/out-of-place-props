@@ -131,15 +131,36 @@ body.v-find .group.all-found, body.v-pack .group.all-packed { display: none; }
 .rm-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 14px 12px 48px; border-top: 1px dashed var(--line); font-size: 13px; }
 .rm-confirm span { flex: 1 1 100%; }
 button.chip.danger { background: var(--accent); border-color: var(--accent); color: var(--surface); }
-form.add { display: flex; gap: 8px; margin-top: 10px; }
-form.add input { flex: 1; min-width: 0; font: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px dashed var(--line); border-radius: 8px; padding: 9px 12px; }
-form.add input::placeholder { color: var(--muted); }
-form.add button[disabled] { opacity: .6; }
+.add-open { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; margin-top: 10px; font: inherit; font-size: 14px; font-weight: 500; color: var(--ink); background: transparent; border: 1px dashed var(--muted); border-radius: 8px; padding: 11px 12px; cursor: pointer; }
+.add-open:hover { border-style: solid; }
+.add-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.modal { position: fixed; inset: 0; z-index: 30; background: rgba(20,14,10,.6); display: flex; align-items: center; justify-content: center; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+.modal[hidden] { display: none; }
+.modal .card { background: var(--surface); color: var(--ink); border-radius: 12px; width: 100%; max-width: 440px; max-height: 100%; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+.modal-title { font-family: var(--display); font-style: italic; font-weight: 500; font-size: 26px; letter-spacing: 0; text-transform: none; color: var(--ink); margin: 0; }
+.modal p { margin: 0; color: var(--muted); }
+.modal .actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.modal .actions .chip { padding: 9px 16px; font-size: 14px; }
+button.chip.primary { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+button.chip[disabled] { opacity: .6; cursor: default; }
+.fld { display: flex; flex-direction: column; gap: 5px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.fld em { font-style: normal; font-weight: 400; text-transform: none; letter-spacing: 0; opacity: .8; }
+.fld input, .fld textarea, .fld select { font: inherit; font-size: 15px; letter-spacing: 0; text-transform: none; font-weight: 400; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; width: 100%; box-sizing: border-box; }
+.fld textarea { resize: vertical; min-height: 70px; }
+.fld input:focus, .fld textarea:focus, .fld select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.photo-pick { display: flex; align-items: center; justify-content: center; min-height: 64px; border: 1px dashed var(--muted); border-radius: 8px; cursor: pointer; font-size: 14px; letter-spacing: 0; text-transform: none; font-weight: 500; color: var(--ink); }
+.vh { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+.vh:focus-visible + .photo-pick, .photo-pick:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.photo-prev { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+label.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px; display: inline-flex; align-items: center; cursor: pointer; font-size: 13px; letter-spacing: 0; text-transform: none; font-weight: 500; color: var(--ink); }
+.photo-prev img { width: 84px; height: 84px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+.form-err { color: var(--accent) !important; font-size: 13px; }
 .removed { margin-top: 30px; font-size: 13.5px; }
 .removed summary { cursor: pointer; color: var(--muted); }
 .removed-list { list-style: none; margin: 8px 0 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
 .removed-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border-top: 1px solid var(--line); }
 .removed-list li:first-child { border-top: 0; }
+.rm-confirm { display: none; }
 
 .footer { margin-top: 40px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 12.5px; color: var(--muted); }
 .confirm { display: inline-flex; gap: 8px; align-items: center; }
@@ -187,6 +208,53 @@ body{margin:0}
     <span class="confirm" id="resetArea"><button class="chip" id="resetBtn">Clear checkmarks</button></span>
     <span class="sync" id="sync">Connecting…</span>
   </div>
+</div>
+
+<div class="modal" id="delModal" hidden role="dialog" aria-modal="true" aria-labelledby="delTitle">
+  <div class="card">
+    <h3 class="modal-title" id="delTitle">Delete this prop?</h3>
+    <p id="delText"></p>
+    <div class="actions">
+      <button class="chip" id="delCancel" type="button">Cancel</button>
+      <button class="chip danger" id="delConfirm" type="button">Delete prop</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="addModal" hidden role="dialog" aria-modal="true" aria-labelledby="addTitle">
+  <form class="card" id="addForm" novalidate>
+    <h3 class="modal-title" id="addTitle">Add a prop</h3>
+    <label class="fld" id="sceneFld"><span>Scene</span>
+      <select id="addScene">
+        <option value="writer">Scene 1 · The Writer</option>
+        <option value="fit">Scene 2 · The Right Fit</option>
+        <option value="tv">Scene 3 · Watching TV</option>
+      </select>
+    </label>
+    <label class="fld"><span>Prop name</span>
+      <input id="addName" type="text" maxlength="80" autocomplete="off" placeholder="e.g. Brass desk bell">
+    </label>
+    <label class="fld"><span>Description <em>optional</em></span>
+      <textarea id="addDesc" maxlength="300" rows="3" placeholder="Color, size, how it's used in the shot"></textarea>
+    </label>
+    <label class="fld" id="whoFld"><span>Who's bringing it <em>optional</em></span>
+      <input id="addWho" type="text" maxlength="120" autocomplete="off" placeholder="Name">
+    </label>
+    <div class="fld"><span>Reference photo <em>optional</em></span>
+      <input type="file" id="addPhoto" accept="image/*" class="vh">
+      <label class="photo-pick" for="addPhoto" id="photoPick">Choose a photo</label>
+      <div class="photo-prev" id="photoPrev" hidden>
+        <img id="photoImg" alt="Selected reference photo">
+        <label class="chip" for="addPhoto" id="photoReplace">Replace photo</label>
+        <button type="button" class="chip" id="photoClear">Remove photo</button>
+      </div>
+    </div>
+    <p class="form-err" id="addErr" hidden></p>
+    <div class="actions">
+      <button class="chip" type="button" id="addCancel">Cancel</button>
+      <button class="chip primary" type="submit" id="addSubmit">Add prop</button>
+    </div>
+  </form>
 </div>
 
 <div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" aria-labelledby="lbCap">
@@ -283,9 +351,11 @@ const SCENES = [
 ];
 
 const IMGS = new Set("r-bed,r-candles,r-chair,r-clips,r-desk,r-guitar,r-lamp,r-mirror,r-perfume,r-poles,r-record,r-rug,r-sheets,r-sunflower,r-vanity,r-vase,t-candles,t-coffee,t-couch,t-dinnerware,t-fallpillows,t-garnish,t-lamp,t-lantern,t-mugs,t-pie,t-pumpkin,t-tvtable,w-books,w-chair,w-guitar,w-lamp,w-portrait,w-rug,w-table,w-typewriter".split(","));
+const imgSrc = (it, w) => it.img ? "https://drive.google.com/thumbnail?id=" + encodeURIComponent(it.img) + "&sz=w" + (w || 400) : it.id + ".jpg";
+const hasImg = it => !it.noImg && (IMGS.has(it.id) || !!it.img);
 function openLightbox(it) {
   const lb = document.getElementById("lightbox");
-  document.getElementById("lbImg").src = it.id + ".jpg";
+  document.getElementById("lbImg").src = imgSrc(it, 1400);
   document.getElementById("lbImg").alt = it.name;
   document.getElementById("lbCap").textContent = it.name;
   lb.hidden = false; lastFocus = document.activeElement;
@@ -305,18 +375,32 @@ const readLS = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k) ||
 let checks = readLS(LS_KEY, {});    // found
 let packed = readLS(LS_PACKED, {});
 let notes = readLS(LS_NOTES, {});
-let custom = readLS(LS_CUSTOM, []); // [{id, name, scene}]
+let custom = readLS(LS_CUSTOM, []); // [{id, name, scene, desc, img}]
+let edits = readLS("oop-props-edits-v1", {}); // built-in prop changes {id: {name, desc, img, noImg}}
 let hidden = new Set(readLS(LS_HIDDEN, []));
 const lastSent = {};
 let builtSig = "";
 
 const el = (tag, cls, txt) => { const n = document.createElement(tag); if (cls) n.className = cls; if (txt != null) n.textContent = txt; return n; };
 const CHECK_SVG = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.5l3 3 6-7" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const PEN_SVG = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M9.5 2.5l2 2L5 11l-2.6.6L3 9z" fill="none" stroke-width="1.5" stroke-linejoin="round"/></svg>';
 const X_SVG = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7" fill="none" stroke-width="1.8" stroke-linecap="round"/></svg>';
 
+function withEdits(it) {
+  const ov = edits[it.id];
+  if (!ov) return it;
+  const o = Object.assign({}, it);
+  if (ov.name) o.name = ov.name;
+  if ("desc" in ov) o.note = ov.desc;
+  if (ov.img) { o.img = ov.img; o.noImg = false; }
+  else if (ov.noImg) o.noImg = true;
+  return o;
+}
+const sigOf = () => JSON.stringify([custom, edits]);
 function allScenes() {
   return SCENES.map(sc => {
-    const mine = custom.filter(c => c.scene === sc.id).map(c => ({ id: c.id, name: c.name, custom: true }));
+    sc = Object.assign({}, sc, { groups: sc.groups.map(g => Object.assign({}, g, { items: g.items.map(withEdits) })) });
+    const mine = custom.filter(c => c.scene === sc.id).map(c => ({ id: c.id, name: c.name, note: c.desc || "", img: c.img || "", noImg: !c.img, custom: true }));
     return mine.length ? Object.assign({}, sc, { groups: sc.groups.concat([{ label: "Added by the crew", items: mine }]) }) : sc;
   });
 }
@@ -353,15 +437,17 @@ function buildItem(it) {
   const bp = el("button", "tg p"); bp.type = "button"; bp.id = "p-" + it.id; bp.innerHTML = CHECK_SVG + "<span>Packed</span>";
   bp.setAttribute("aria-label", "Packed: " + it.name);
   bp.addEventListener("click", () => setState(it.id, "packed", bp.getAttribute("aria-pressed") !== "true"));
-  const rm = el("button", "rm"); rm.type = "button"; rm.innerHTML = X_SVG; rm.title = "Remove from list"; rm.setAttribute("aria-label", "Remove " + it.name + " from the list");
-  rm.addEventListener("click", () => askRemove(li, it));
-  tgs.append(bf, bp, rm);
+  const rm = el("button", "rm"); rm.type = "button"; rm.innerHTML = X_SVG; rm.title = "Delete prop"; rm.setAttribute("aria-label", "Delete " + it.name);
+  rm.addEventListener("click", () => openDelete(it));
+  const ed = el("button", "rm ed"); ed.type = "button"; ed.innerHTML = PEN_SVG; ed.title = "Edit prop"; ed.setAttribute("aria-label", "Edit " + it.name);
+  ed.addEventListener("click", () => openEdit(it));
+  tgs.append(bf, bp, ed, rm);
   who.append(bring, tgs);
 
   const row = el("div", "row"); row.append(hd);
-  if (IMGS.has(it.id)) {
+  if (hasImg(it)) {
     const tb = el("button", "thumb"); tb.type = "button"; tb.setAttribute("aria-label", "View reference photo: " + it.name);
-    const im = el("img"); im.src = it.id + ".jpg"; im.alt = ""; im.loading = "lazy";
+    const im = el("img"); im.src = imgSrc(it, 300); im.alt = ""; im.loading = "lazy";
     tb.append(im); tb.addEventListener("click", () => openLightbox(it));
     row.append(tb);
   }
@@ -369,18 +455,17 @@ function buildItem(it) {
   return li;
 }
 
-function askRemove(li, it) {
-  if (li.querySelector(".rm-confirm")) return;
-  const bar = el("div", "rm-confirm");
-  bar.append(el("span", null, "Remove “" + it.name + "” for everyone?"));
-  const yes = el("button", "chip danger", "Remove"); yes.type = "button";
-  const no = el("button", "chip", "Cancel"); no.type = "button";
-  yes.addEventListener("click", () => removeItem(it.id));
-  no.addEventListener("click", () => bar.remove());
-  bar.append(yes, no);
-  li.append(bar);
-  no.focus();
+let delTarget = null, modalReturn = null;
+function showModal(id, focusEl) { modalReturn = document.activeElement; document.getElementById(id).hidden = false; if (focusEl) focusEl.focus(); }
+function hideModal(id) { document.getElementById(id).hidden = true; if (modalReturn && document.contains(modalReturn)) modalReturn.focus(); }
+function openDelete(it) {
+  delTarget = it;
+  document.getElementById("delText").textContent = "Are you sure you want to delete “" + it.name + "”? It moves to Deleted props at the bottom of the page, where anyone can put it back.";
+  showModal("delModal", document.getElementById("delCancel"));
 }
+document.getElementById("delCancel").addEventListener("click", () => { delTarget = null; hideModal("delModal"); });
+document.getElementById("delConfirm").addEventListener("click", () => { const it = delTarget; delTarget = null; hideModal("delModal"); if (it) removeItem(it.id); });
+document.getElementById("delModal").addEventListener("click", e => { if (e.target.id === "delModal") { delTarget = null; hideModal("delModal"); } });
 
 function build() {
   const ae = document.activeElement;
@@ -405,18 +490,12 @@ function build() {
       g.items.forEach(it => ul.append(buildItem(it)));
       grp.append(ul); s.append(grp);
     });
-    // add-a-prop form
-    const form = el("form", "add");
-    const inp = el("input"); inp.type = "text"; inp.id = "add-" + sc.id; inp.maxLength = 80; inp.autocomplete = "off";
-    inp.placeholder = "Add a prop to " + sc.title;
-    inp.setAttribute("aria-label", "New prop name for " + sc.title);
-    const btn = el("button", "chip add-btn", "Add prop"); btn.type = "submit";
-    form.append(inp, btn);
-    form.addEventListener("submit", e => { e.preventDefault(); addItem(sc.id, inp, btn); });
-    s.append(form);
+    const addBtn = el("button", "add-open", "+ Add a prop to " + sc.title); addBtn.type = "button"; addBtn.id = "add-" + sc.id;
+    addBtn.addEventListener("click", () => openAdd(sc.id));
+    s.append(addBtn);
     root.append(s);
   });
-  builtSig = custom.map(c => c.id + ":" + c.name).join("|");
+  builtSig = sigOf();
   if (focusId) {
     const n = document.getElementById(focusId);
     if (n) { n.focus(); if (selStart != null && n.setSelectionRange) try { n.setSelectionRange(selStart, selStart); } catch (e) {} }
@@ -431,7 +510,7 @@ function buildRemoved() {
   if (!ids.length) { box.hidden = true; return; }
   box.hidden = false;
   const det = el("details");
-  det.append(el("summary", null, "Removed props (" + ids.length + ")"));
+  det.append(el("summary", null, "Deleted props (" + ids.length + ")"));
   const ul = el("ul", "removed-list");
   ids.forEach(id => {
     const li = el("li");
@@ -444,7 +523,7 @@ function buildRemoved() {
 }
 
 function render() {
-  if (custom.map(c => c.id + ":" + c.name).join("|") !== builtSig) build();
+  if (sigOf() !== builtSig) build();
   let total = 0, nf = 0, np = 0;
   allScenes().forEach(sc => {
     let t = 0, f = 0, p = 0;
@@ -487,6 +566,7 @@ function saveLocal() {
     localStorage.setItem(LS_NOTES, JSON.stringify(notes));
     localStorage.setItem(LS_CUSTOM, JSON.stringify(custom));
     localStorage.setItem(LS_HIDDEN, JSON.stringify([...hidden]));
+    localStorage.setItem("oop-props-edits-v1", JSON.stringify(edits));
   } catch (e) {}
 }
 
@@ -530,6 +610,7 @@ function applyRemote(j) {
   });
   checks = nc; packed = np; notes = nn;
   if (Array.isArray(j.custom)) custom = j.custom.slice().sort((a, b) => (a.created || 0) - (b.created || 0));
+  if (j.edits && typeof j.edits === "object" && !Array.isArray(j.edits)) edits = j.edits;
   if (Array.isArray(j.hidden) && !hidePending) hidden = new Set(j.hidden);
   saveLocal(); render();
 }
@@ -552,24 +633,134 @@ async function setState(id, which, on) {
   await pushDoc(id);
 }
 
-async function addItem(scene, inp, btn) {
-  const name = inp.value.trim();
-  if (!name) { inp.focus(); return; }
-  btn.disabled = true; btn.textContent = "Adding…";
-  try {
-    const j = await POST({ action: "add", scene, name });
-    inp.value = "";
-    applyRemote(j);
-    setSync("Added “" + name + "”. Everyone with the link sees it.");
-  } catch (e) { setSync(OFFLINE_MSG); }
-  const b2 = document.querySelector("#" + scene + " .add-btn");
-  if (b2) { b2.disabled = false; b2.textContent = "Add prop"; }
-  const i2 = document.getElementById("add-" + scene); if (i2) i2.focus();
+let photoData = "", photoRemoved = false, formMode = "add", editTarget = null;
+function resetAddForm() {
+  ["addName", "addDesc", "addWho"].forEach(id => document.getElementById(id).value = "");
+  photoData = ""; photoRemoved = false;
+  document.getElementById("addPhoto").value = "";
+  showPhoto("");
+  const err = document.getElementById("addErr"); err.hidden = true; err.textContent = "";
 }
+function showPhoto(src) {
+  const prev = document.getElementById("photoPrev"), pick = document.getElementById("photoPick"), im = document.getElementById("photoImg");
+  if (src) { im.src = src; prev.hidden = false; pick.hidden = true; }
+  else { im.removeAttribute("src"); prev.hidden = true; pick.hidden = false; }
+}
+function clearPhoto() {
+  photoData = ""; photoRemoved = true;
+  document.getElementById("addPhoto").value = "";
+  showPhoto("");
+}
+function setFormMode(mode) {
+  formMode = mode;
+  const edit = mode === "edit";
+  document.getElementById("addTitle").textContent = edit ? "Edit prop" : "Add a prop";
+  document.getElementById("sceneFld").hidden = edit;
+  document.getElementById("whoFld").hidden = edit;
+  const b = document.getElementById("addSubmit"); b.disabled = false; b.textContent = edit ? "Save changes" : "Add prop";
+}
+function openAdd(scene) {
+  editTarget = null;
+  resetAddForm(); setFormMode("add");
+  document.getElementById("addScene").value = scene;
+  showModal("addModal", document.getElementById("addName"));
+}
+function openEdit(it) {
+  editTarget = it;
+  resetAddForm(); setFormMode("edit");
+  document.getElementById("addName").value = it.name;
+  document.getElementById("addDesc").value = it.note || "";
+  if (hasImg(it)) showPhoto(imgSrc(it, 300));
+  showModal("addModal", document.getElementById("addName"));
+}
+function resizeImage(file, max) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement("canvas");
+      c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
+      const ctx = c.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      resolve(c.toDataURL("image/jpeg", 0.82));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("unreadable")); };
+    img.src = url;
+  });
+}
+document.getElementById("addPhoto").addEventListener("change", async e => {
+  const f = e.target.files && e.target.files[0];
+  const err = document.getElementById("addErr");
+  if (!f) return;
+  try {
+    photoData = await resizeImage(f, 1200);
+    photoRemoved = false;
+    showPhoto(photoData);
+    err.hidden = true;
+  } catch (x) {
+    clearPhoto();
+    err.textContent = "That photo couldn't be opened. Try a JPG or PNG, or take a screenshot of it and pick that.";
+    err.hidden = false;
+  }
+});
+document.getElementById("photoClear").addEventListener("click", clearPhoto);
+document.getElementById("addCancel").addEventListener("click", () => hideModal("addModal"));
+document.getElementById("addModal").addEventListener("click", e => { if (e.target.id === "addModal") hideModal("addModal"); });
+document.getElementById("addForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const name = document.getElementById("addName").value.trim();
+  const err = document.getElementById("addErr");
+  if (!name) { err.textContent = "Give the prop a name."; err.hidden = false; document.getElementById("addName").focus(); return; }
+  const btn = document.getElementById("addSubmit");
+  if (formMode === "edit") {
+    const it = editTarget;
+    btn.disabled = true; btn.textContent = photoData ? "Uploading photo…" : "Saving…";
+    try {
+      const body = { action: "edit", id: it.id, name, desc: document.getElementById("addDesc").value.trim() };
+      if (photoData) body.image = photoData; else if (photoRemoved) body.removeImage = true;
+      const j = await POST(body);
+      if (!j || !j.ok) throw new Error("failed");
+      applyRemote(j);
+      hideModal("addModal");
+      setSync(j.warning ? "Saved “" + name + "”, but " + j.warning : "Saved changes to “" + name + "”.");
+    } catch (x) {
+      btn.disabled = false; btn.textContent = "Save changes";
+      err.textContent = "Couldn't save the changes. Check your connection and try again.";
+      err.hidden = false;
+    }
+    return;
+  }
+  btn.disabled = true; btn.textContent = photoData ? "Uploading photo…" : "Adding…";
+  try {
+    const j = await POST({
+      action: "add",
+      scene: document.getElementById("addScene").value,
+      name,
+      desc: document.getElementById("addDesc").value.trim(),
+      note: document.getElementById("addWho").value.trim(),
+      image: photoData
+    });
+    if (!j || !j.ok) throw new Error((j && j.error) || "failed");
+    applyRemote(j);
+    hideModal("addModal");
+    setSync(j.warning ? "Added “" + name + "”, but " + j.warning : "Added “" + name + "”. Everyone with the link sees it.");
+  } catch (x) {
+    btn.disabled = false; btn.textContent = "Add prop";
+    err.textContent = "Couldn't add the prop. Check your connection and try again.";
+    err.hidden = false;
+  }
+});
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape") return;
+  if (!document.getElementById("addModal").hidden) hideModal("addModal");
+  if (!document.getElementById("delModal").hidden) { delTarget = null; hideModal("delModal"); }
+});
 
 async function removeItem(id) {
   hidden.add(id); hidePending++; saveLocal(); render();
-  try { const j = await POST({ action: "remove", id }); hidePending--; applyRemote(j); setSync("Removed. You can put it back under Removed props."); }
+  try { const j = await POST({ action: "remove", id }); hidePending--; applyRemote(j); setSync("Deleted. You can put it back under Deleted props at the bottom."); }
   catch (e) { hidePending--; hidden.delete(id); saveLocal(); render(); setSync(OFFLINE_MSG); }
 }
 
