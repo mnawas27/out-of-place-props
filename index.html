@@ -90,6 +90,16 @@ ul.list { list-style: none; margin: 0; padding: 0; background: var(--surface); b
 .tags { display: inline-flex; flex-wrap: wrap; gap: 4px; margin-left: 6px; vertical-align: 1px; }
 .tag { font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; border: 1px solid var(--line); color: var(--muted); padding: 1px 6px; border-radius: 4px; }
 .tag.tony { border-color: var(--accent); color: var(--accent); }
+button.tag { font-family: inherit; background: transparent; cursor: text; line-height: 1.4; }
+button.tag:hover { border-color: var(--muted); }
+button.tag:focus-visible, .tag-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+button.tag.add-tag { border-style: dashed; cursor: pointer; text-transform: none; letter-spacing: 0; opacity: .75; }
+button.tag.add-tag:hover { opacity: 1; }
+.tag-input { font: inherit; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink); background: var(--bg); border: 1px solid var(--accent); border-radius: 4px; padding: 1px 6px; width: 12ch; min-width: 6ch; max-width: 100%; }
+.scene-prog { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 6px 10px; margin: 2px 0 14px; max-width: 520px; }
+.scene-prog .sp-label { font-size: 12.5px; font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; min-width: 108px; }
+.scene-prog .sp-label b { color: var(--ink); font-weight: 600; }
+.scene-prog .track { height: 6px; }
 .sw { flex: none; width: 12px; height: 12px; border-radius: 50%; margin-top: 6px; border: 1px solid rgba(0,0,0,.15); }
 .item.is-packed .name { text-decoration: line-through; color: var(--done); }
 .row { display: flex; align-items: flex-start; }
@@ -274,7 +284,7 @@ const SCENES = [
         { id: "w-table", name: "Lil table", sw: "walnut" },
         { id: "w-lamp", name: "Lamp", note: "Flickers on cue near the end" },
         { id: "w-books", name: "Stack of books" },
-        { id: "w-guitar", name: "Guitar", tags: ["Tony", "Also Scene 2"] },
+        { id: "w-guitar", name: "Guitar", tags: ["From Tony", "Also Scene 2"] },
         { id: "w-portrait", name: "Empty portrait frame", sw: "oak", note: "Used for the empty-frame shots" },
         { id: "w-wire", name: "Fishing wire", note: "Deck says: get this too, for the frame" },
         { id: "w-rug", name: "Rug", note: "Faded red Persian style", tags: ["Also Scene 2"] },
@@ -294,13 +304,13 @@ const SCENES = [
         { id: "r-poles", name: "Two wooden poles for clothesline" },
         { id: "r-clips", name: "Wooden clips" },
         { id: "r-mirror", name: "Full-length mirror" },
-        { id: "r-record", name: "Record player", tags: ["Tony"] },
+        { id: "r-record", name: "Record player", tags: ["From Tony"] },
         { id: "r-vanity", name: "Vanity with small mirror" },
         { id: "r-vase", name: "Wine bottle vase" },
         { id: "r-sunflower", name: "Sunflower" },
         { id: "r-candles", name: "Candles (1–2)" },
         { id: "r-sheets", name: "Sheets (off-white / cream)", sw: "cream" },
-        { id: "r-guitar", name: "Guitar", tags: ["Tony"] },
+        { id: "r-guitar", name: "Guitar", tags: ["From Tony"] },
         { id: "r-chair", name: "Chair", sw: "oak", note: "Wooden stool for the vanity" },
         { id: "r-lamp", name: "Tall lamp", tags: ["Also Scene 3"] },
         { id: "r-bed", name: "Bed" },
@@ -394,13 +404,14 @@ function withEdits(it) {
   if ("desc" in ov) o.note = ov.desc;
   if (ov.img) { o.img = ov.img; o.noImg = false; }
   else if (ov.noImg) o.noImg = true;
+  if (Array.isArray(ov.tags)) o.tags = ov.tags;
   return o;
 }
 const sigOf = () => JSON.stringify([custom, edits]);
 function allScenes() {
   return SCENES.map(sc => {
     sc = Object.assign({}, sc, { groups: sc.groups.map(g => Object.assign({}, g, { items: g.items.map(withEdits) })) });
-    const mine = custom.filter(c => c.scene === sc.id).map(c => ({ id: c.id, name: c.name, note: c.desc || "", img: c.img || "", noImg: !c.img, custom: true }));
+    const mine = custom.filter(c => c.scene === sc.id).map(c => ({ id: c.id, name: c.name, note: c.desc || "", img: c.img || "", noImg: !c.img, tags: c.tags || [], custom: true }));
     return mine.length ? Object.assign({}, sc, { groups: sc.groups.concat([{ label: "Added by the crew", items: mine }]) }) : sc;
   });
 }
@@ -412,11 +423,7 @@ function buildItem(it) {
   const box = el("span", "box"); box.innerHTML = CHECK_SVG; box.setAttribute("aria-hidden", "true");
   const txt = el("span", "txt");
   txt.append(el("span", "name", it.name));
-  if (it.tags) {
-    const tg = el("span", "tags");
-    it.tags.forEach(t => tg.append(el("span", "tag" + (t === "Tony" ? " tony" : ""), t === "Tony" ? "From Tony" : t)));
-    txt.append(tg);
-  }
+  txt.append(buildTags(it));
   if (it.note) txt.append(el("span", "note", it.note));
   hd.append(box, txt);
   if (it.sw) { const d = el("span", "sw"); d.style.background = SW[it.sw]; d.title = it.sw; hd.append(d); }
@@ -455,6 +462,48 @@ function buildItem(it) {
   return li;
 }
 
+const isTony = t => /^from\s/i.test(t);
+function buildTags(it) {
+  const tg = el("span", "tags");
+  const tags = it.tags || [];
+  tags.forEach((t, i) => {
+    const b = el("button", "tag" + (isTony(t) ? " tony" : ""), t); b.type = "button";
+    b.title = "Click to edit this label"; b.setAttribute("aria-label", "Edit label: " + t);
+    b.addEventListener("click", () => editTag(it, i, b));
+    tg.append(b);
+  });
+  const add = el("button", "tag add-tag", "+ label"); add.type = "button";
+  add.setAttribute("aria-label", "Add a label to " + it.name);
+  add.addEventListener("click", () => editTag(it, tags.length, add));
+  tg.append(add);
+  return tg;
+}
+function editTag(it, idx, btn) {
+  const tags = (it.tags || []).slice();
+  const inp = el("input", "tag-input"); inp.type = "text"; inp.maxLength = 30; inp.value = tags[idx] || "";
+  inp.placeholder = "Label"; inp.setAttribute("aria-label", "Label text (leave empty to remove)");
+  inp.style.width = Math.max(8, inp.value.length + 2) + "ch";
+  btn.replaceWith(inp); inp.focus(); inp.select();
+  let done = false;
+  const finish = save => {
+    if (done) return; done = true;
+    const val = inp.value.replace(/\s+/g, " ").trim();
+    if (!save || val === (tags[idx] || "")) { inp.replaceWith(btn); return; }
+    if (val) tags[idx] = val; else tags.splice(idx, 1);
+    saveTags(it, tags);
+  };
+  inp.addEventListener("input", () => { inp.style.width = Math.max(8, inp.value.length + 2) + "ch"; });
+  inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); finish(true); } if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); finish(false); } });
+  inp.addEventListener("blur", () => finish(true));
+}
+async function saveTags(it, tags) {
+  if (it.custom) { const c = custom.find(x => x.id === it.id); if (c) c.tags = tags; }
+  else { edits[it.id] = Object.assign({}, edits[it.id] || {}, { tags }); }
+  hidePending++; saveLocal(); render();
+  try { const j = await POST({ action: "edit", id: it.id, tags }); hidePending--; applyRemote(j); setSync("Label saved."); }
+  catch (e) { hidePending--; setSync(OFFLINE_MSG); }
+}
+
 let delTarget = null, modalReturn = null;
 function showModal(id, focusEl) { modalReturn = document.activeElement; document.getElementById(id).hidden = false; if (focusEl) focusEl.focus(); }
 function hideModal(id) { document.getElementById(id).hidden = true; if (modalReturn && document.contains(modalReturn)) modalReturn.focus(); }
@@ -481,7 +530,13 @@ function build() {
     const sc_count = el("span", "scene-count"); sc_count.dataset.scene = sc.id;
     head.append(left, sc_count);
     const meta = el("p", "meta"); sc.meta.forEach(m => meta.append(el("span", null, m)));
-    s.append(head, meta);
+    const prog = el("div", "scene-prog");
+    [["found", "fill found"], ["packed", "fill"]].forEach(([k, cls]) => {
+      const lab = el("span", "sp-label"); lab.id = "sp-" + k + "-" + sc.id;
+      const tr = el("div", "track"); const fl = el("div", cls); fl.id = "spf-" + k + "-" + sc.id; tr.append(fl);
+      prog.append(lab, tr);
+    });
+    s.append(head, meta, prog);
     sc.groups.forEach(g => {
       const grp = el("div", "group");
       grp.append(el("h3", null, g.label));
@@ -544,7 +599,13 @@ function render() {
       t++; if (isF) f++; if (isP) p++;
     }));
     total += t; nf += f; np += p;
-    document.querySelector('[data-scene="' + sc.id + '"]').textContent = f + "/" + t + " found · " + p + "/" + t + " packed";
+    document.querySelector('[data-scene="' + sc.id + '"]').textContent = t ? Math.round(f / t * 100) + "% found" : "";
+    const setSp = (k, n) => {
+      const lab = document.getElementById("sp-" + k + "-" + sc.id), fl = document.getElementById("spf-" + k + "-" + sc.id);
+      if (lab) lab.innerHTML = "<b>" + n + "</b> / " + t + " " + k;
+      if (fl) fl.style.width = (t ? n / t * 100 : 0) + "%";
+    };
+    setSp("found", f); setSp("packed", p);
   });
   document.querySelectorAll(".group").forEach(g => {
     const items = [...g.querySelectorAll(".item")].filter(i => !i.classList.contains("is-removed"));
@@ -609,8 +670,8 @@ function applyRemote(j) {
     if (notes[id]) nn[id] = notes[id]; else delete nn[id];
   });
   checks = nc; packed = np; notes = nn;
-  if (Array.isArray(j.custom)) custom = j.custom.slice().sort((a, b) => (a.created || 0) - (b.created || 0));
-  if (j.edits && typeof j.edits === "object" && !Array.isArray(j.edits)) edits = j.edits;
+  if (Array.isArray(j.custom) && !hidePending) custom = j.custom.slice().sort((a, b) => (a.created || 0) - (b.created || 0));
+  if (j.edits && typeof j.edits === "object" && !Array.isArray(j.edits) && !hidePending) edits = j.edits;
   if (Array.isArray(j.hidden) && !hidePending) hidden = new Set(j.hidden);
   saveLocal(); render();
 }
