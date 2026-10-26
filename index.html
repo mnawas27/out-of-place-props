@@ -122,6 +122,24 @@ body.v-find .group.all-found, body.v-pack .group.all-packed { display: none; }
 .prog .count { min-width: 100px; }
 .fill.found { background: var(--found); }
 .legend { font-size: 12.5px; color: var(--muted); margin: 10px 0 0; }
+.item.is-removed, .group.all-removed { display: none; }
+.rm { flex: none; width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid transparent; background: transparent; color: var(--muted); border-radius: 999px; cursor: pointer; padding: 0; }
+.rm svg { width: 13px; height: 13px; }
+.rm svg path { stroke: currentColor; }
+.rm:hover { border-color: var(--line); color: var(--accent); }
+.rm:focus-visible, .add input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.rm-confirm { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 14px 12px 48px; border-top: 1px dashed var(--line); font-size: 13px; }
+.rm-confirm span { flex: 1 1 100%; }
+button.chip.danger { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+form.add { display: flex; gap: 8px; margin-top: 10px; }
+form.add input { flex: 1; min-width: 0; font: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px dashed var(--line); border-radius: 8px; padding: 9px 12px; }
+form.add input::placeholder { color: var(--muted); }
+form.add button[disabled] { opacity: .6; }
+.removed { margin-top: 30px; font-size: 13.5px; }
+.removed summary { cursor: pointer; color: var(--muted); }
+.removed-list { list-style: none; margin: 8px 0 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+.removed-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border-top: 1px solid var(--line); }
+.removed-list li:first-child { border-top: 0; }
 
 .footer { margin-top: 40px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 12.5px; color: var(--muted); }
 .confirm { display: inline-flex; gap: 8px; align-items: center; }
@@ -163,6 +181,7 @@ body{margin:0}
   </div>
 
   <main id="scenes"></main>
+  <div class="removed" id="removed" hidden></div>
 
   <div class="footer">
     <span class="confirm" id="resetArea"><button class="chip" id="resetBtn">Clear checkmarks</button></span>
@@ -280,19 +299,96 @@ const SW = { walnut: "var(--walnut)", oak: "var(--oak)", cream: "var(--cream)", 
 const LS_KEY = "oop-props-v1";
 const LS_PACKED = "oop-props-packed-v1";
 const LS_NOTES = "oop-props-notes-v1";
-let checks = {};   // found
-let packed = {};
-let notes = {};
+const LS_CUSTOM = "oop-props-custom-v1";
+const LS_HIDDEN = "oop-props-hidden-v1";
+const readLS = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k) || "null"); return v == null ? d : v; } catch (e) { return d; } };
+let checks = readLS(LS_KEY, {});    // found
+let packed = readLS(LS_PACKED, {});
+let notes = readLS(LS_NOTES, {});
+let custom = readLS(LS_CUSTOM, []); // [{id, name, scene}]
+let hidden = new Set(readLS(LS_HIDDEN, []));
 const lastSent = {};
-const readLS = k => { try { return JSON.parse(localStorage.getItem(k) || "{}") || {}; } catch (e) { return {}; } };
-checks = readLS(LS_KEY); packed = readLS(LS_PACKED); notes = readLS(LS_NOTES);
+let builtSig = "";
 
 const el = (tag, cls, txt) => { const n = document.createElement(tag); if (cls) n.className = cls; if (txt != null) n.textContent = txt; return n; };
 const CHECK_SVG = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.5l3 3 6-7" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const X_SVG = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7" fill="none" stroke-width="1.8" stroke-linecap="round"/></svg>';
+
+function allScenes() {
+  return SCENES.map(sc => {
+    const mine = custom.filter(c => c.scene === sc.id).map(c => ({ id: c.id, name: c.name, custom: true }));
+    return mine.length ? Object.assign({}, sc, { groups: sc.groups.concat([{ label: "Added by the crew", items: mine }]) }) : sc;
+  });
+}
+function allItems() { const out = []; allScenes().forEach(sc => sc.groups.forEach(g => g.items.forEach(it => out.push(it)))); return out; }
+
+function buildItem(it) {
+  const li = el("li", "item"); li.id = "item-" + it.id;
+  const hd = el("div", "head");
+  const box = el("span", "box"); box.innerHTML = CHECK_SVG; box.setAttribute("aria-hidden", "true");
+  const txt = el("span", "txt");
+  txt.append(el("span", "name", it.name));
+  if (it.tags) {
+    const tg = el("span", "tags");
+    it.tags.forEach(t => tg.append(el("span", "tag" + (t === "Tony" ? " tony" : ""), t === "Tony" ? "From Tony" : t)));
+    txt.append(tg);
+  }
+  if (it.note) txt.append(el("span", "note", it.note));
+  hd.append(box, txt);
+  if (it.sw) { const d = el("span", "sw"); d.style.background = SW[it.sw]; d.title = it.sw; hd.append(d); }
+
+  const who = el("div", "who");
+  const bring = el("div", "bring");
+  const wl = el("label", "who-label", "Bringing"); wl.htmlFor = "who-" + it.id;
+  const wi = el("input"); wi.type = "text"; wi.id = "who-" + it.id; wi.placeholder = "Who's bringing it?"; wi.autocomplete = "off";
+  wi.value = notes[it.id] || "";
+  let tmr = null;
+  wi.addEventListener("input", () => { notes[it.id] = wi.value; saveLocal(); clearTimeout(tmr); tmr = setTimeout(() => pushDoc(it.id), 700); });
+  wi.addEventListener("blur", () => { clearTimeout(tmr); if ((lastSent[it.id] ?? "") !== (notes[it.id] || "")) pushDoc(it.id); });
+  bring.append(wl, wi);
+  const tgs = el("div", "toggles");
+  const bf = el("button", "tg f"); bf.type = "button"; bf.id = "f-" + it.id; bf.innerHTML = CHECK_SVG + "<span>Found</span>";
+  bf.setAttribute("aria-label", "Found: " + it.name);
+  bf.addEventListener("click", () => setState(it.id, "found", bf.getAttribute("aria-pressed") !== "true"));
+  const bp = el("button", "tg p"); bp.type = "button"; bp.id = "p-" + it.id; bp.innerHTML = CHECK_SVG + "<span>Packed</span>";
+  bp.setAttribute("aria-label", "Packed: " + it.name);
+  bp.addEventListener("click", () => setState(it.id, "packed", bp.getAttribute("aria-pressed") !== "true"));
+  const rm = el("button", "rm"); rm.type = "button"; rm.innerHTML = X_SVG; rm.title = "Remove from list"; rm.setAttribute("aria-label", "Remove " + it.name + " from the list");
+  rm.addEventListener("click", () => askRemove(li, it));
+  tgs.append(bf, bp, rm);
+  who.append(bring, tgs);
+
+  const row = el("div", "row"); row.append(hd);
+  if (IMGS.has(it.id)) {
+    const tb = el("button", "thumb"); tb.type = "button"; tb.setAttribute("aria-label", "View reference photo: " + it.name);
+    const im = el("img"); im.src = it.id + ".jpg"; im.alt = ""; im.loading = "lazy";
+    tb.append(im); tb.addEventListener("click", () => openLightbox(it));
+    row.append(tb);
+  }
+  li.append(row, who);
+  return li;
+}
+
+function askRemove(li, it) {
+  if (li.querySelector(".rm-confirm")) return;
+  const bar = el("div", "rm-confirm");
+  bar.append(el("span", null, "Remove “" + it.name + "” for everyone?"));
+  const yes = el("button", "chip danger", "Remove"); yes.type = "button";
+  const no = el("button", "chip", "Cancel"); no.type = "button";
+  yes.addEventListener("click", () => removeItem(it.id));
+  no.addEventListener("click", () => bar.remove());
+  bar.append(yes, no);
+  li.append(bar);
+  no.focus();
+}
 
 function build() {
+  const ae = document.activeElement;
+  const focusId = ae && ae.id ? ae.id : null;
+  const selStart = focusId && ae.selectionStart != null ? ae.selectionStart : null;
   const root = document.getElementById("scenes");
-  SCENES.forEach(sc => {
+  root.innerHTML = "";
+  allScenes().forEach(sc => {
     const s = el("section", "scene"); s.id = sc.id;
     const head = el("div", "scene-head");
     const left = el("div");
@@ -306,63 +402,58 @@ function build() {
       grp.append(el("h3", null, g.label));
       if (g.flag) grp.append(el("div", "flag", g.flag));
       const ul = el("ul", "list");
-      g.items.forEach(it => {
-        const li = el("li", "item"); li.id = "item-" + it.id;
-        const hd = el("div", "head");
-        const box = el("span", "box"); box.innerHTML = CHECK_SVG; box.setAttribute("aria-hidden", "true");
-        const txt = el("span", "txt");
-        txt.append(el("span", "name", it.name));
-        if (it.tags) {
-          const tg = el("span", "tags");
-          it.tags.forEach(t => tg.append(el("span", "tag" + (t === "Tony" ? " tony" : ""), t === "Tony" ? "From Tony" : t)));
-          txt.append(tg);
-        }
-        if (it.note) txt.append(el("span", "note", it.note));
-        hd.append(box, txt);
-        if (it.sw) { const d = el("span", "sw"); d.style.background = SW[it.sw]; d.title = it.sw; hd.append(d); }
-
-        const who = el("div", "who");
-        const bring = el("div", "bring");
-        const wl = el("label", "who-label", "Bringing"); wl.htmlFor = "who-" + it.id;
-        const wi = el("input"); wi.type = "text"; wi.id = "who-" + it.id; wi.placeholder = "Who's bringing it?"; wi.autocomplete = "off";
-        let tmr = null;
-        wi.addEventListener("input", () => { notes[it.id] = wi.value; saveLocal(); clearTimeout(tmr); tmr = setTimeout(() => pushDoc(it.id), 700); });
-        wi.addEventListener("blur", () => { clearTimeout(tmr); if ((lastSent[it.id] ?? "") !== (notes[it.id] || "")) pushDoc(it.id); });
-        bring.append(wl, wi);
-        const tgs = el("div", "toggles");
-        const bf = el("button", "tg f"); bf.type = "button"; bf.id = "f-" + it.id; bf.innerHTML = CHECK_SVG + "<span>Found</span>";
-        bf.setAttribute("aria-label", "Found: " + it.name);
-        bf.addEventListener("click", () => setState(it.id, "found", bf.getAttribute("aria-pressed") !== "true"));
-        const bp = el("button", "tg p"); bp.type = "button"; bp.id = "p-" + it.id; bp.innerHTML = CHECK_SVG + "<span>Packed</span>";
-        bp.setAttribute("aria-label", "Packed: " + it.name);
-        bp.addEventListener("click", () => setState(it.id, "packed", bp.getAttribute("aria-pressed") !== "true"));
-        tgs.append(bf, bp);
-        who.append(bring, tgs);
-
-        const row = el("div", "row"); row.append(hd);
-        if (IMGS.has(it.id)) {
-          const tb = el("button", "thumb"); tb.type = "button"; tb.setAttribute("aria-label", "View reference photo: " + it.name);
-          const im = el("img"); im.src = it.id + ".jpg"; im.alt = ""; im.loading = "lazy";
-          tb.append(im); tb.addEventListener("click", () => openLightbox(it));
-          row.append(tb);
-        }
-        li.append(row, who); ul.append(li);
-      });
+      g.items.forEach(it => ul.append(buildItem(it)));
       grp.append(ul); s.append(grp);
     });
+    // add-a-prop form
+    const form = el("form", "add");
+    const inp = el("input"); inp.type = "text"; inp.id = "add-" + sc.id; inp.maxLength = 80; inp.autocomplete = "off";
+    inp.placeholder = "Add a prop to " + sc.title;
+    inp.setAttribute("aria-label", "New prop name for " + sc.title);
+    const btn = el("button", "chip add-btn", "Add prop"); btn.type = "submit";
+    form.append(inp, btn);
+    form.addEventListener("submit", e => { e.preventDefault(); addItem(sc.id, inp, btn); });
+    s.append(form);
     root.append(s);
   });
+  builtSig = custom.map(c => c.id + ":" + c.name).join("|");
+  if (focusId) {
+    const n = document.getElementById(focusId);
+    if (n) { n.focus(); if (selStart != null && n.setSelectionRange) try { n.setSelectionRange(selStart, selStart); } catch (e) {} }
+  }
+}
+
+function buildRemoved() {
+  const box = document.getElementById("removed");
+  const byId = {}; allItems().forEach(it => byId[it.id] = it);
+  const ids = [...hidden].filter(id => byId[id]);
+  box.innerHTML = "";
+  if (!ids.length) { box.hidden = true; return; }
+  box.hidden = false;
+  const det = el("details");
+  det.append(el("summary", null, "Removed props (" + ids.length + ")"));
+  const ul = el("ul", "removed-list");
+  ids.forEach(id => {
+    const li = el("li");
+    li.append(el("span", null, byId[id].name));
+    const b = el("button", "chip", "Put back"); b.type = "button";
+    b.addEventListener("click", () => restoreItem(id));
+    li.append(b); ul.append(li);
+  });
+  det.append(ul); box.append(det);
 }
 
 function render() {
+  if (custom.map(c => c.id + ":" + c.name).join("|") !== builtSig) build();
   let total = 0, nf = 0, np = 0;
-  SCENES.forEach(sc => {
+  allScenes().forEach(sc => {
     let t = 0, f = 0, p = 0;
     sc.groups.forEach(g => g.items.forEach(it => {
-      t++;
-      const isP = !!packed[it.id], isF = isP || !!checks[it.id];
-      if (isF) f++; if (isP) p++;
       const li = document.getElementById("item-" + it.id);
+      if (!li) return;
+      const gone = hidden.has(it.id);
+      li.classList.toggle("is-removed", gone);
+      const isP = !!packed[it.id], isF = isP || !!checks[it.id];
       li.classList.toggle("is-found", isF && !isP);
       li.classList.toggle("is-packed", isP);
       li.dataset.found = isF ? "1" : "";
@@ -370,12 +461,15 @@ function render() {
       document.getElementById("p-" + it.id).setAttribute("aria-pressed", String(isP));
       const wi = document.getElementById("who-" + it.id);
       if (wi && document.activeElement !== wi && wi.value !== (notes[it.id] || "")) wi.value = notes[it.id] || "";
+      if (gone) return;
+      t++; if (isF) f++; if (isP) p++;
     }));
     total += t; nf += f; np += p;
     document.querySelector('[data-scene="' + sc.id + '"]').textContent = f + "/" + t + " found · " + p + "/" + t + " packed";
   });
   document.querySelectorAll(".group").forEach(g => {
-    const items = [...g.querySelectorAll(".item")];
+    const items = [...g.querySelectorAll(".item")].filter(i => !i.classList.contains("is-removed"));
+    g.classList.toggle("all-removed", items.length === 0);
     g.classList.toggle("all-found", items.every(i => i.dataset.found === "1"));
     g.classList.toggle("all-packed", items.every(i => i.classList.contains("is-packed")));
   });
@@ -383,6 +477,7 @@ function render() {
   document.getElementById("countPacked").textContent = np + " / " + total + " packed";
   document.getElementById("fillFound").style.width = (total ? (nf / total) * 100 : 0) + "%";
   document.getElementById("fillPacked").style.width = (total ? (np / total) * 100 : 0) + "%";
+  buildRemoved();
 }
 
 function saveLocal() {
@@ -390,12 +485,15 @@ function saveLocal() {
     localStorage.setItem(LS_KEY, JSON.stringify(checks));
     localStorage.setItem(LS_PACKED, JSON.stringify(packed));
     localStorage.setItem(LS_NOTES, JSON.stringify(notes));
+    localStorage.setItem(LS_CUSTOM, JSON.stringify(custom));
+    localStorage.setItem(LS_HIDDEN, JSON.stringify([...hidden]));
   } catch (e) {}
 }
 
 const API = "https://script.google.com/macros/s/AKfycbzYJgGMDBe38vjwxIASdlDQLnn9Un-DZD-ThaMZRcQPdjIcSUWnfcW4n9biUAi3VbsIag/exec";
 const pending = {};
 const POST = body => fetch(API, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(body) }).then(r => r.json());
+const OFFLINE_MSG = "Couldn't reach the shared list. Check your connection and try again.";
 
 async function pushDoc(id) {
   const note = (notes[id] || "").trim();
@@ -404,15 +502,18 @@ async function pushDoc(id) {
   try {
     const j = await POST({ action: "set", id, done: !!checks[id] || !!packed[id], packed: !!packed[id], note });
     pending[id]--;
-    if (j && j.items) applyRemote(j.items);
+    applyRemote(j);
     setSync("Saved. Everyone with the link sees this.");
   } catch (e) {
     pending[id]--;
-    setSync("Couldn't reach the shared list. Check your connection and try again.");
+    setSync(OFFLINE_MSG);
   }
 }
 
-function applyRemote(items) {
+let hidePending = 0;
+function applyRemote(j) {
+  if (!j || !j.items) return;
+  const items = j.items;
   const ae = document.activeElement;
   const focused = ae && ae.id && ae.id.startsWith("who-") ? ae.id.slice(4) : null;
   const nc = {}, np = {}, nn = {};
@@ -427,13 +528,16 @@ function applyRemote(items) {
     if (packed[id]) np[id] = true; else delete np[id];
     if (notes[id]) nn[id] = notes[id]; else delete nn[id];
   });
-  checks = nc; packed = np; notes = nn; saveLocal(); render();
+  checks = nc; packed = np; notes = nn;
+  if (Array.isArray(j.custom)) custom = j.custom.slice().sort((a, b) => (a.created || 0) - (b.created || 0));
+  if (Array.isArray(j.hidden) && !hidePending) hidden = new Set(j.hidden);
+  saveLocal(); render();
 }
 
 async function pull() {
   try {
     const j = await (await fetch(API)).json();
-    if (j && j.items) { applyRemote(j.items); setSync("Live. Updates every few seconds."); }
+    if (j && j.items) { applyRemote(j); setSync("Live. Updates every few seconds."); }
   } catch (e) { setSync("Offline. Showing the last list this phone saw."); }
 }
 
@@ -446,6 +550,33 @@ async function setState(id, which, on) {
   }
   saveLocal(); render();
   await pushDoc(id);
+}
+
+async function addItem(scene, inp, btn) {
+  const name = inp.value.trim();
+  if (!name) { inp.focus(); return; }
+  btn.disabled = true; btn.textContent = "Adding…";
+  try {
+    const j = await POST({ action: "add", scene, name });
+    inp.value = "";
+    applyRemote(j);
+    setSync("Added “" + name + "”. Everyone with the link sees it.");
+  } catch (e) { setSync(OFFLINE_MSG); }
+  const b2 = document.querySelector("#" + scene + " .add-btn");
+  if (b2) { b2.disabled = false; b2.textContent = "Add prop"; }
+  const i2 = document.getElementById("add-" + scene); if (i2) i2.focus();
+}
+
+async function removeItem(id) {
+  hidden.add(id); hidePending++; saveLocal(); render();
+  try { const j = await POST({ action: "remove", id }); hidePending--; applyRemote(j); setSync("Removed. You can put it back under Removed props."); }
+  catch (e) { hidePending--; hidden.delete(id); saveLocal(); render(); setSync(OFFLINE_MSG); }
+}
+
+async function restoreItem(id) {
+  hidden.delete(id); hidePending++; saveLocal(); render();
+  try { const j = await POST({ action: "restore", id }); hidePending--; applyRemote(j); setSync("Put back on the list."); }
+  catch (e) { hidePending--; hidden.add(id); saveLocal(); render(); setSync(OFFLINE_MSG); }
 }
 
 function setSync(t) { document.getElementById("sync").textContent = t; }
@@ -469,7 +600,7 @@ function wireReset() {
       if (scope === "all") checks = {};
       packed = {};
       saveLocal(); render();
-      try { const j = await POST({ action: "reset", scope }); if (j && j.items) applyRemote(j.items); } catch (e) { setSync("Couldn't reach the shared list. Check your connection and try again."); }
+      try { const j = await POST({ action: "reset", scope }); applyRemote(j); } catch (e) { setSync(OFFLINE_MSG); }
       restore();
     };
     onlyP.addEventListener("click", () => run("packed"));
