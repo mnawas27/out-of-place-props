@@ -19,6 +19,7 @@
   --accent: #6B1F26;
   --done: #8C7B6B;
   --check: #4A3222;
+  --found: #3B7A4C;
   --display: "Bodoni Moda", "Didot", "Bodoni 72", Georgia, serif;
   --body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   /* prop palette from the deck */
@@ -28,13 +29,13 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #1C1612; --surface: #261E18; --ink: #F1E8DA; --muted: #A8978A;
-    --line: #3A2F27; --accent: #E0828A; --done: #7F7064; --check: #E3B98A;
+    --line: #3A2F27; --accent: #E0828A; --done: #7F7064; --check: #E3B98A; --found: #7CC291;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #1C1612; --surface: #261E18; --ink: #F1E8DA; --muted: #A8978A;
-  --line: #3A2F27; --accent: #E0828A; --done: #7F7064; --check: #E3B98A;
+  --line: #3A2F27; --accent: #E0828A; --done: #7F7064; --check: #E3B98A; --found: #7CC291;
   color-scheme: dark;
 }
 body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.45; }
@@ -58,7 +59,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .controls { display: flex; gap: 8px; }
 button.chip { font: inherit; font-size: 13px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); padding: 6px 12px; border-radius: 999px; cursor: pointer; }
 button.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-button.chip:focus-visible, .item input:focus-visible + .box { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.chip:focus-visible, .tg:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 section.scene { margin-top: 34px; }
 .scene-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
@@ -74,13 +75,15 @@ h3 { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: v
 ul.list { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
 .item { border-top: 1px solid var(--line); }
 .item:first-child { border-top: 0; }
-.item label { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; cursor: pointer; min-height: 24px; }
-.item input[type="checkbox"] { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.item .head { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px 8px; min-height: 24px; }
 .box { flex: none; width: 22px; height: 22px; border: 1.5px solid var(--muted); border-radius: 5px; display: grid; place-items: center; margin-top: 1px; transition: background .15s, border-color .15s; }
 .box svg { width: 14px; height: 14px; opacity: 0; }
-.item input:checked + .box { background: var(--check); border-color: var(--check); }
-.item input:checked + .box svg { opacity: 1; }
-.box svg path { stroke: var(--surface); }
+.box svg path { stroke: var(--found); }
+.item.is-found .box { border-color: var(--found); border-width: 2px; }
+.item.is-found .box svg { opacity: 1; }
+.item.is-packed .box { background: var(--check); border-color: var(--check); }
+.item.is-packed .box svg { opacity: 1; }
+.item.is-packed .box svg path { stroke: var(--surface); }
 .txt { min-width: 0; flex: 1; }
 .name { font-weight: 500; }
 .note { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
@@ -88,31 +91,43 @@ ul.list { list-style: none; margin: 0; padding: 0; background: var(--surface); b
 .tag { font-size: 10.5px; letter-spacing: .04em; text-transform: uppercase; border: 1px solid var(--line); color: var(--muted); padding: 1px 6px; border-radius: 4px; }
 .tag.tony { border-color: var(--accent); color: var(--accent); }
 .sw { flex: none; width: 12px; height: 12px; border-radius: 50%; margin-top: 6px; border: 1px solid rgba(0,0,0,.15); }
-.item input:checked ~ .txt .name { text-decoration: line-through; color: var(--done); }
+.item.is-packed .name { text-decoration: line-through; color: var(--done); }
 .row { display: flex; align-items: flex-start; }
-.row > label { flex: 1; min-width: 0; }
+.row > .head { flex: 1; min-width: 0; }
 .thumb { flex: none; width: 64px; height: 64px; margin: 10px 12px 0 0; padding: 0; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--line); cursor: zoom-in; }
 .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .thumb:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.item.is-done .thumb { opacity: .55; }
+.item.is-packed .thumb { opacity: .55; }
 .lightbox { position: fixed; inset: 0; z-index: 20; background: rgba(20,14,10,.88); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); cursor: zoom-out; }
 .lightbox[hidden] { display: none; }
 .lightbox img { max-width: 100%; max-height: 78vh; border-radius: 6px; object-fit: contain; }
 .lightbox .cap { color: #F1E8DA; font-family: var(--display); font-style: italic; font-size: 22px; text-align: center; }
 .lightbox .close { position: absolute; top: max(12px, env(safe-area-inset-top, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); font: inherit; font-size: 13px; color: #F1E8DA; background: transparent; border: 1px solid rgba(241,232,218,.4); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
-.who { display: flex; align-items: center; gap: 8px; padding: 0 14px 12px 48px; margin-top: -4px; }
+.who { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 0 14px 12px 48px; }
+.who .bring { display: flex; align-items: center; gap: 8px; flex: 1 1 170px; min-width: 0; }
+.toggles { display: flex; gap: 6px; flex: none; }
+.tg { font: inherit; font-size: 12.5px; font-weight: 500; display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px 5px 9px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; min-height: 30px; }
+.tg svg { width: 12px; height: 12px; }
+.tg svg path { stroke: currentColor; }
+.tg.f[aria-pressed="true"] { background: var(--found); border-color: var(--found); color: var(--surface); }
+.tg.p[aria-pressed="true"] { background: var(--check); border-color: var(--check); color: var(--surface); }
 .who-label { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
-.who input { flex: 1; min-width: 0; font: inherit; font-size: 13.5px; color: var(--ink); background: transparent; border: 0; border-bottom: 1px dashed var(--line); padding: 4px 2px; border-radius: 0; }
+.who input { flex: 1 1 auto; min-width: 0; font: inherit; font-size: 13.5px; color: var(--ink); background: transparent; border: 0; border-bottom: 1px dashed var(--line); padding: 4px 2px; border-radius: 0; }
 .who input::placeholder { color: var(--muted); opacity: .7; }
 .who input:focus { outline: none; border-bottom: 1px solid var(--accent); }
 .who input:not(:placeholder-shown) { border-bottom-style: solid; font-weight: 500; }
-body.remaining .item.is-done { display: none; }
-body.remaining .group.all-done { display: none; }
+body.v-find .item[data-found="1"], body.v-pack .item.is-packed { display: none; }
+body.v-find .group.all-found, body.v-pack .group.all-packed { display: none; }
+.prog { display: flex; align-items: center; gap: 10px; flex: 1 1 220px; min-width: 0; }
+.prog .count { min-width: 100px; }
+.fill.found { background: var(--found); }
+.legend { font-size: 12.5px; color: var(--muted); margin: 10px 0 0; }
 
 .footer { margin-top: 40px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 12.5px; color: var(--muted); }
 .confirm { display: inline-flex; gap: 8px; align-items: center; }
 .sync { margin-left: auto; }
 @media (prefers-reduced-motion: reduce) { .fill, .box { transition: none; } }
+.scene-count { text-align: right; }
 [hidden]{display:none!important}
 body{margin:0}
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -134,20 +149,23 @@ body{margin:0}
       <div style="background:var(--cherry)"><b>Cherry</b>Her pie only</div>
     </div>
     <p class="palette-note">Color dots on items match the deck's prop palette.</p>
+    <p class="legend"><b>Found</b> means we have it. <b>Packed</b> means it's in the car for the shoot.</p>
   </header>
 
   <div class="bar">
-    <span class="count" id="count">0 / 0 packed</span>
-    <div class="track"><div class="fill" id="fill"></div></div>
-    <div class="controls">
-      <button class="chip" id="toggleRemaining" aria-pressed="false">Still needed</button>
+    <div class="prog"><span class="count" id="countFound">0 / 0 found</span><div class="track"><div class="fill found" id="fillFound"></div></div></div>
+    <div class="prog"><span class="count" id="countPacked">0 / 0 packed</span><div class="track"><div class="fill" id="fillPacked"></div></div></div>
+    <div class="controls" role="group" aria-label="Filter the list">
+      <button class="chip" data-view="all" aria-pressed="true">All</button>
+      <button class="chip" data-view="find" aria-pressed="false">To find</button>
+      <button class="chip" data-view="pack" aria-pressed="false">To pack</button>
     </div>
   </div>
 
   <main id="scenes"></main>
 
   <div class="footer">
-    <span class="confirm" id="resetArea"><button class="chip" id="resetBtn">Uncheck everything</button></span>
+    <span class="confirm" id="resetArea"><button class="chip" id="resetBtn">Clear checkmarks</button></span>
     <span class="sync" id="sync">Connecting…</span>
   </div>
 </div>
@@ -260,13 +278,14 @@ document.getElementById("lightbox").addEventListener("click", closeLightbox);
 document.addEventListener("keydown", e => { if (e.key === "Escape" && !document.getElementById("lightbox").hidden) closeLightbox(); });
 const SW = { walnut: "var(--walnut)", oak: "var(--oak)", cream: "var(--cream)", gold: "var(--gold)", copper: "var(--copper)", oxblood: "var(--oxblood)", cherry: "var(--cherry)" };
 const LS_KEY = "oop-props-v1";
+const LS_PACKED = "oop-props-packed-v1";
 const LS_NOTES = "oop-props-notes-v1";
-let checks = {};
+let checks = {};   // found
+let packed = {};
 let notes = {};
 const lastSent = {};
-let db = null;
-try { checks = JSON.parse(localStorage.getItem(LS_KEY) || "{}") || {}; } catch (e) { checks = {}; }
-try { notes = JSON.parse(localStorage.getItem(LS_NOTES) || "{}") || {}; } catch (e) { notes = {}; }
+const readLS = k => { try { return JSON.parse(localStorage.getItem(k) || "{}") || {}; } catch (e) { return {}; } };
+checks = readLS(LS_KEY); packed = readLS(LS_PACKED); notes = readLS(LS_NOTES);
 
 const el = (tag, cls, txt) => { const n = document.createElement(tag); if (cls) n.className = cls; if (txt != null) n.textContent = txt; return n; };
 const CHECK_SVG = '<svg viewBox="0 0 14 14" aria-hidden="true"><path d="M2.5 7.5l3 3 6-7" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -288,30 +307,39 @@ function build() {
       if (g.flag) grp.append(el("div", "flag", g.flag));
       const ul = el("ul", "list");
       g.items.forEach(it => {
-        const li = el("li", "item"); li.dataset.id = it.id;
-        const lab = el("label");
-        const inp = el("input"); inp.type = "checkbox"; inp.id = "cb-" + it.id;
-        inp.addEventListener("change", () => toggle(it.id, inp.checked));
-        const box = el("span", "box"); box.innerHTML = CHECK_SVG;
+        const li = el("li", "item"); li.id = "item-" + it.id;
+        const hd = el("div", "head");
+        const box = el("span", "box"); box.innerHTML = CHECK_SVG; box.setAttribute("aria-hidden", "true");
         const txt = el("span", "txt");
-        const nm = el("span", "name", it.name);
-        txt.append(nm);
+        txt.append(el("span", "name", it.name));
         if (it.tags) {
           const tg = el("span", "tags");
           it.tags.forEach(t => tg.append(el("span", "tag" + (t === "Tony" ? " tony" : ""), t === "Tony" ? "From Tony" : t)));
           txt.append(tg);
         }
         if (it.note) txt.append(el("span", "note", it.note));
-        lab.append(inp, box, txt);
-        if (it.sw) { const d = el("span", "sw"); d.style.background = SW[it.sw]; d.title = it.sw; lab.append(d); }
+        hd.append(box, txt);
+        if (it.sw) { const d = el("span", "sw"); d.style.background = SW[it.sw]; d.title = it.sw; hd.append(d); }
+
         const who = el("div", "who");
+        const bring = el("div", "bring");
         const wl = el("label", "who-label", "Bringing"); wl.htmlFor = "who-" + it.id;
         const wi = el("input"); wi.type = "text"; wi.id = "who-" + it.id; wi.placeholder = "Who's bringing it?"; wi.autocomplete = "off";
         let tmr = null;
         wi.addEventListener("input", () => { notes[it.id] = wi.value; saveLocal(); clearTimeout(tmr); tmr = setTimeout(() => pushDoc(it.id), 700); });
         wi.addEventListener("blur", () => { clearTimeout(tmr); if ((lastSent[it.id] ?? "") !== (notes[it.id] || "")) pushDoc(it.id); });
-        who.append(wl, wi);
-        const row = el("div", "row"); row.append(lab);
+        bring.append(wl, wi);
+        const tgs = el("div", "toggles");
+        const bf = el("button", "tg f"); bf.type = "button"; bf.id = "f-" + it.id; bf.innerHTML = CHECK_SVG + "<span>Found</span>";
+        bf.setAttribute("aria-label", "Found: " + it.name);
+        bf.addEventListener("click", () => setState(it.id, "found", bf.getAttribute("aria-pressed") !== "true"));
+        const bp = el("button", "tg p"); bp.type = "button"; bp.id = "p-" + it.id; bp.innerHTML = CHECK_SVG + "<span>Packed</span>";
+        bp.setAttribute("aria-label", "Packed: " + it.name);
+        bp.addEventListener("click", () => setState(it.id, "packed", bp.getAttribute("aria-pressed") !== "true"));
+        tgs.append(bf, bp);
+        who.append(bring, tgs);
+
+        const row = el("div", "row"); row.append(hd);
         if (IMGS.has(it.id)) {
           const tb = el("button", "thumb"); tb.type = "button"; tb.setAttribute("aria-label", "View reference photo: " + it.name);
           const im = el("img"); im.src = it.id + ".jpg"; im.alt = ""; im.loading = "lazy";
@@ -327,29 +355,43 @@ function build() {
 }
 
 function render() {
-  let total = 0, done = 0;
+  let total = 0, nf = 0, np = 0;
   SCENES.forEach(sc => {
-    let t = 0, d = 0;
+    let t = 0, f = 0, p = 0;
     sc.groups.forEach(g => g.items.forEach(it => {
-      t++; const on = !!checks[it.id]; if (on) d++;
-      const inp = document.getElementById("cb-" + it.id);
-      if (inp && inp.checked !== on) inp.checked = on;
-      inp.closest(".item").classList.toggle("is-done", on);
+      t++;
+      const isP = !!packed[it.id], isF = isP || !!checks[it.id];
+      if (isF) f++; if (isP) p++;
+      const li = document.getElementById("item-" + it.id);
+      li.classList.toggle("is-found", isF && !isP);
+      li.classList.toggle("is-packed", isP);
+      li.dataset.found = isF ? "1" : "";
+      document.getElementById("f-" + it.id).setAttribute("aria-pressed", String(isF));
+      document.getElementById("p-" + it.id).setAttribute("aria-pressed", String(isP));
       const wi = document.getElementById("who-" + it.id);
       if (wi && document.activeElement !== wi && wi.value !== (notes[it.id] || "")) wi.value = notes[it.id] || "";
     }));
-    total += t; done += d;
-    document.querySelector('[data-scene="' + sc.id + '"]').textContent = d + " / " + t;
+    total += t; nf += f; np += p;
+    document.querySelector('[data-scene="' + sc.id + '"]').textContent = f + "/" + t + " found · " + p + "/" + t + " packed";
   });
   document.querySelectorAll(".group").forEach(g => {
-    const items = g.querySelectorAll(".item");
-    g.classList.toggle("all-done", [...items].every(i => i.classList.contains("is-done")));
+    const items = [...g.querySelectorAll(".item")];
+    g.classList.toggle("all-found", items.every(i => i.dataset.found === "1"));
+    g.classList.toggle("all-packed", items.every(i => i.classList.contains("is-packed")));
   });
-  document.getElementById("count").textContent = done + " / " + total + " packed";
-  document.getElementById("fill").style.width = (total ? (done / total) * 100 : 0) + "%";
+  document.getElementById("countFound").textContent = nf + " / " + total + " found";
+  document.getElementById("countPacked").textContent = np + " / " + total + " packed";
+  document.getElementById("fillFound").style.width = (total ? (nf / total) * 100 : 0) + "%";
+  document.getElementById("fillPacked").style.width = (total ? (np / total) * 100 : 0) + "%";
 }
 
-function saveLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify(checks)); localStorage.setItem(LS_NOTES, JSON.stringify(notes)); } catch (e) {} }
+function saveLocal() {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify(checks));
+    localStorage.setItem(LS_PACKED, JSON.stringify(packed));
+    localStorage.setItem(LS_NOTES, JSON.stringify(notes));
+  } catch (e) {}
+}
 
 const API = "https://script.google.com/macros/s/AKfycbzYJgGMDBe38vjwxIASdlDQLnn9Un-DZD-ThaMZRcQPdjIcSUWnfcW4n9biUAi3VbsIag/exec";
 const pending = {};
@@ -360,7 +402,7 @@ async function pushDoc(id) {
   lastSent[id] = notes[id] || "";
   pending[id] = (pending[id] || 0) + 1;
   try {
-    const j = await POST({ action: "set", id, done: !!checks[id], note });
+    const j = await POST({ action: "set", id, done: !!checks[id] || !!packed[id], packed: !!packed[id], note });
     pending[id]--;
     if (j && j.items) applyRemote(j.items);
     setSync("Saved. Everyone with the link sees this.");
@@ -373,15 +415,19 @@ async function pushDoc(id) {
 function applyRemote(items) {
   const ae = document.activeElement;
   const focused = ae && ae.id && ae.id.startsWith("who-") ? ae.id.slice(4) : null;
-  const nc = {}, nn = {};
-  Object.keys(items).forEach(id => { const v = items[id] || {}; if (v.done) nc[id] = true; if (v.note) nn[id] = v.note; });
+  const nc = {}, np = {}, nn = {};
+  Object.keys(items).forEach(id => {
+    const v = items[id] || {};
+    if (v.done) nc[id] = true; if (v.packed) np[id] = true; if (v.note) nn[id] = v.note;
+  });
   const keep = Object.keys(pending).filter(k => pending[k] > 0);
   if (focused) keep.push(focused);
   keep.forEach(id => {
     if (checks[id]) nc[id] = true; else delete nc[id];
+    if (packed[id]) np[id] = true; else delete np[id];
     if (notes[id]) nn[id] = notes[id]; else delete nn[id];
   });
-  checks = nc; notes = nn; saveLocal(); render();
+  checks = nc; packed = np; notes = nn; saveLocal(); render();
 }
 
 async function pull() {
@@ -391,37 +437,47 @@ async function pull() {
   } catch (e) { setSync("Offline. Showing the last list this phone saw."); }
 }
 
-async function toggle(id, on) {
-  checks[id] = on; if (!on) delete checks[id];
+// Packing something means you have it; un-finding something un-packs it.
+async function setState(id, which, on) {
+  if (which === "found") {
+    if (on) checks[id] = true; else { delete checks[id]; delete packed[id]; }
+  } else {
+    if (on) { packed[id] = true; checks[id] = true; } else delete packed[id];
+  }
   saveLocal(); render();
   await pushDoc(id);
 }
 
 function setSync(t) { document.getElementById("sync").textContent = t; }
 
-document.getElementById("toggleRemaining").addEventListener("click", e => {
-  const on = e.currentTarget.getAttribute("aria-pressed") !== "true";
-  e.currentTarget.setAttribute("aria-pressed", String(on));
-  document.body.classList.toggle("remaining", on);
-});
+document.querySelectorAll("[data-view]").forEach(b => b.addEventListener("click", () => {
+  const v = b.dataset.view;
+  document.querySelectorAll("[data-view]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  document.body.classList.toggle("v-find", v === "find");
+  document.body.classList.toggle("v-pack", v === "pack");
+}));
 
 function wireReset() {
   const area = document.getElementById("resetArea");
   document.getElementById("resetBtn").addEventListener("click", () => {
     area.innerHTML = "";
-    const q = el("span", null, "Uncheck all items?");
-    const yes = el("button", "chip", "Yes, uncheck all");
+    const q = el("span", null, "Clear which checkmarks?");
+    const onlyP = el("button", "chip", "Packed only");
+    const all = el("button", "chip", "Found and packed");
     const no = el("button", "chip", "Cancel");
-    yes.addEventListener("click", async () => {
-      const ids = Object.keys(checks);
-      checks = {}; saveLocal(); render();
-      try { const j = await POST({ action: "reset" }); if (j && j.items) applyRemote(j.items); } catch (e) { setSync("Couldn't reach the shared list. Check your connection and try again."); }
+    const run = async scope => {
+      if (scope === "all") checks = {};
+      packed = {};
+      saveLocal(); render();
+      try { const j = await POST({ action: "reset", scope }); if (j && j.items) applyRemote(j.items); } catch (e) { setSync("Couldn't reach the shared list. Check your connection and try again."); }
       restore();
-    });
+    };
+    onlyP.addEventListener("click", () => run("packed"));
+    all.addEventListener("click", () => run("all"));
     no.addEventListener("click", restore);
-    area.append(q, yes, no);
+    area.append(q, onlyP, all, no);
   });
-  function restore() { area.innerHTML = '<button class="chip" id="resetBtn">Uncheck everything</button>'; wireReset(); }
+  function restore() { area.innerHTML = '<button class="chip" id="resetBtn">Clear checkmarks</button>'; wireReset(); }
 }
 
 build(); render(); wireReset();
